@@ -6,7 +6,10 @@
  */
 import React, { useState } from "react"
 import ReactDOM from "react-dom"
-import { createStore } from './redux'
+import { createStore, applyMiddleware } from './redux'
+import thunk from './redux/redux-thunk'
+
+const store = createStore(reducer, applyMiddleware(thunk))
 
 function reducer(state = { number: 0 }, action) {
   switch (action.type) {
@@ -20,6 +23,11 @@ function reducer(state = { number: 0 }, action) {
         ...state,
         number: state.number - action.number
       }
+    case 'ASYNCAdd': 
+      return {
+        ...state,
+        number: state.number + action.number
+      }
     default:
       return {
         ...state
@@ -27,10 +35,9 @@ function reducer(state = { number: 0 }, action) {
   }
 }
 
-const store = createStore(reducer)
-
 function App() {
   const [number, setNumber] = useState(() => store.getState().number)
+
   const onAdd = () => {
     store.dispatch({ type: 'ADD', number: 1 })
     store.subscribe(() => {
@@ -47,10 +54,19 @@ function App() {
     })
   } 
 
+  const onAsyncAdd = () => {
+    store.dispatch(() => {
+      setTimeout(() => {
+        return dispatch({ type: 'ASYNCAdd', number: 1 })
+      }, 1000);
+    })
+  }
+
   return (
     <>
       <button onClick={onAdd}>add</button>
       <button onClick={onDel}>del</button>
+      <button onClick={onAsyncAdd}>asyncAdd</button>
       <div>{number}</div>
     </>
   )

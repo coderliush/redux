@@ -28285,29 +28285,288 @@ if ("development" === 'production') {
 } else {
   module.exports = require('./cjs/react-dom.development.js');
 }
-},{"./cjs/react-dom.development.js":"node_modules/react-dom/cjs/react-dom.development.js"}],"index.js":[function(require,module,exports) {
+},{"./cjs/react-dom.development.js":"node_modules/react-dom/cjs/react-dom.development.js"}],"redux/index.js":[function(require,module,exports) {
 "use strict";
 
-var _react = _interopRequireDefault(require("react"));
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createStore = createStore;
+exports.compose = compose;
+exports.applyMiddleware = applyMiddleware;
 
-var _reactDom = _interopRequireDefault(require("react-dom"));
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _iterableToArray(iter) { if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) return _arrayLikeToArray(arr); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
 /*
  * @Description: 
  * @Author: liushuhao
- * @Date: 2020-10-09 14:27:01
+ * @Date: 2020-10-10 10:07:59
  * @LastEditors: liushuhao
  */
+
+/**
+ * @param {function} reducer 传入一个 reducer 
+ * @returns {object} 返回一个包含各种方法的对象 { dispatch, getState, subscribe ... }
+ */
+function createStore(reducer) {
+  var state;
+  var listeners = [];
+
+  var getState = function getState() {
+    return state;
+  };
+
+  var subscribe = function subscribe(fn) {
+    listeners.push(fn);
+
+    var unsubscribe = function unsubscribe() {
+      listeners = listeners.filter(function (listener) {
+        return fn !== listener;
+      });
+    };
+
+    return unsubscribe;
+  }; // 1.通过 dispath a action 去修改 state 
+  // 2. subcribe 注册的所有回调
+
+
+  var dispatch = function dispatch(action) {
+    state = reducer(state, action);
+    listeners.forEach(function (fn) {
+      return fn();
+    });
+  }; // 初始调用 dispatch，返回默认的 state
+
+
+  dispatch({
+    type: "@@redux/__INIT__".concat(Math.random())
+  });
+  return {
+    getState: getState,
+    dispatch: dispatch,
+    subscribe: subscribe
+  };
+}
+
+function compose() {
+  for (var _len = arguments.length, funcs = new Array(_len), _key = 0; _key < _len; _key++) {
+    funcs[_key] = arguments[_key];
+  }
+
+  //如果没有中间件
+  if (funcs.length === 0) {
+    return function (arg) {
+      return arg;
+    };
+  } //中间件长度为1
+
+
+  if (funcs.length === 1) {
+    return funcs[0];
+  }
+
+  return funcs.reduce(function (prev, current) {
+    return function () {
+      return prev(current.apply(void 0, arguments));
+    };
+  });
+}
+
+function applyMiddleware() {
+  for (var _len2 = arguments.length, middlewares = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+    middlewares[_key2] = arguments[_key2];
+  }
+
+  return function (createStore) {
+    return function () {
+      var store = createStore.apply(void 0, arguments);
+
+      var _dispatch;
+
+      var middlewaresAPI = {
+        getState: store.getState,
+        dispatch: function dispatch() {
+          return _dispatch.apply(void 0, arguments);
+        }
+      };
+      var middles = middlewares.map(function (middleware) {
+        return middleware(middlewareAPI);
+      });
+      _dispatch = compose.apply(void 0, _toConsumableArray(middles))(store.dispatch);
+      return _objectSpread(_objectSpread({}, store), {}, {
+        dispatch: _dispatch
+      });
+    };
+  };
+}
+},{}],"redux/redux-thunk.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+/*
+ * @Description: 
+ * @Author: liushuhao
+ * @Date: 2020-10-10 16:15:17
+ * @LastEditors: liushuhao
+ */
+function createThunkMiddleware(extraArgument) {
+  return function (_ref) {
+    var dispatch = _ref.dispatch,
+        getState = _ref.getState;
+    return function (next) {
+      return function (action) {
+        if (typeof action === 'function') {
+          return action(dispatch, getState, extraArgument);
+        }
+
+        return next(action);
+      };
+    };
+  };
+}
+
+var thunk = createThunkMiddleware();
+thunk.withExtraArgument = createThunkMiddleware;
+var _default = thunk;
+exports.default = _default;
+},{}],"index.js":[function(require,module,exports) {
+"use strict";
+
+var _react = _interopRequireWildcard(require("react"));
+
+var _reactDom = _interopRequireDefault(require("react-dom"));
+
+var _redux = require("./redux");
+
+var _reduxThunk = _interopRequireDefault(require("./redux/redux-thunk"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var store = (0, _redux.createStore)(reducer, (0, _redux.applyMiddleware)(_reduxThunk.default));
+
+function reducer() {
+  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
+    number: 0
+  };
+  var action = arguments.length > 1 ? arguments[1] : undefined;
+
+  switch (action.type) {
+    case 'ADD':
+      return _objectSpread(_objectSpread({}, state), {}, {
+        number: state.number + action.number
+      });
+
+    case 'DEL':
+      return _objectSpread(_objectSpread({}, state), {}, {
+        number: state.number - action.number
+      });
+
+    case 'ASYNCAdd':
+      return _objectSpread(_objectSpread({}, state), {}, {
+        number: state.number + action.number
+      });
+
+    default:
+      return _objectSpread({}, state);
+  }
+}
+
 function App() {
-  return 'init';
+  var _useState = (0, _react.useState)(function () {
+    return store.getState().number;
+  }),
+      _useState2 = _slicedToArray(_useState, 2),
+      number = _useState2[0],
+      setNumber = _useState2[1];
+
+  var onAdd = function onAdd() {
+    store.dispatch({
+      type: 'ADD',
+      number: 1
+    });
+    store.subscribe(function () {
+      var number = store.getState().number;
+      setNumber(number);
+    });
+  };
+
+  var onDel = function onDel() {
+    store.dispatch({
+      type: 'DEL',
+      number: 1
+    });
+    store.subscribe(function () {
+      var number = store.getState().number;
+      setNumber(number);
+    });
+  };
+
+  var onAsyncAdd = function onAsyncAdd() {
+    store.dispatch(function () {
+      setTimeout(function () {
+        return dispatch({
+          type: 'ASYNCAdd',
+          number: 1
+        });
+      }, 1000);
+    });
+  };
+
+  return /*#__PURE__*/_react.default.createElement(_react.default.Fragment, null, /*#__PURE__*/_react.default.createElement("button", {
+    onClick: onAdd
+  }, "add"), /*#__PURE__*/_react.default.createElement("button", {
+    onClick: onDel
+  }, "del"), /*#__PURE__*/_react.default.createElement("button", {
+    onClick: onAsyncAdd
+  }, "asyncAdd"), /*#__PURE__*/_react.default.createElement("div", null, number));
 }
 
 var mountNode = document.getElementById("app");
 
 _reactDom.default.render( /*#__PURE__*/_react.default.createElement(App, null), mountNode);
-},{"react":"node_modules/react/index.js","react-dom":"node_modules/react-dom/index.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"react":"node_modules/react/index.js","react-dom":"node_modules/react-dom/index.js","./redux":"redux/index.js","./redux/redux-thunk":"redux/redux-thunk.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
