@@ -9,7 +9,12 @@
  * @param {function} reducer 传入一个 reducer 
  * @returns {object} 返回一个包含各种方法的对象 { dispatch, getState, subscribe ... }
  */
-export function createStore(reducer) {
+export function createStore(reducer, preloadedState, enhancer) {
+    if (typeof enhancer === 'undefined' && typeof preloadedState === 'function') {
+        enhancer = preloadedState
+        preloadedState = undefined
+        return enhancer(createStore)(reducer, preloadedState)
+    }
     let state
     let listeners = []
     const getState = () => state
@@ -30,6 +35,15 @@ export function createStore(reducer) {
     // 初始调用 dispatch，返回默认的 state
     dispatch({ type: `@@redux/__INIT__${Math.random()}` });
 
+    // 中间件  
+    // enhancer = applyMiddleware(...middlewares)
+    // enhancer(createStore) = applyMiddleware(...middlewares)(createStore)。 applyMiddleware() 返回一个函数，参数为(createStore)
+    // enhancer(createStore)(reducer, preloadedState) = applyMiddleware(...middlewares)(createStore)(reducer, preloadedState) 
+    // applyMiddleware(...middlewares)(createStore) 返回一个函数，参数为(reducer, preloadedState) 
+    if (typeof enhancer !== 'undefined') {
+        return enhancer(createStore)(reducer, preloadedState)  
+    }
+
     return {
         getState,
         dispatch,
@@ -46,19 +60,18 @@ export function compose(...funcs) {
     if (funcs.length === 1) {
         return funcs[0]
     }
-
+   
     return funcs.reduce((prev, current) => (...args) => prev(current(...args)));
 }
 
 export function applyMiddleware(...middlewares) {
     return createStore => (...args) => {
         let store = createStore(...args)
-        let dispatch
-        const middlewaresAPI = {
+        const middlewareAPI = {
             getState: store.getState,
             dispatch: (...args) => dispatch(...args)
         }
-
+  
         let middles = middlewares.map(middleware => middleware(middlewareAPI));
         dispatch = compose(...middles)(store.dispatch);
         return {
@@ -66,4 +79,4 @@ export function applyMiddleware(...middlewares) {
             dispatch
         }
     }
-}
+}  

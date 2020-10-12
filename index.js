@@ -7,6 +7,7 @@
 import React, { useState } from "react"
 import ReactDOM from "react-dom"
 import { createStore, applyMiddleware } from './redux'
+import { Provider, connect } from './redux/react-redux'
 import thunk from './redux/redux-thunk'
 
 const store = createStore(reducer, applyMiddleware(thunk))
@@ -35,7 +36,7 @@ function reducer(state = { number: 0 }, action) {
   }
 }
 
-function App() {
+function _App() {
   const [number, setNumber] = useState(() => store.getState().number)
 
   const onAdd = () => {
@@ -72,5 +73,13 @@ function App() {
   )
 }
 
+let App = connect(() => {
+  return {}
+}, {
+  // add,
+  // del,
+})(_App)
+
 var mountNode = document.getElementById("app")
-ReactDOM.render(<App />, mountNode)
+ReactDOM.render(<_App />, mountNode)
+// React.render(<Provider store={store}><App /></Provider>, mountNode)
